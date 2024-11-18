@@ -2,55 +2,45 @@
     x:Class="Pmail.Views.TwoPaneViewPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-    xmlns:ic="using:Microsoft.Xaml.Interactions.Core"
-    xmlns:i="using:Microsoft.Xaml.Interactivity"
-    xmlns:winui="using:Microsoft.UI.Xaml.Controls"
-    xmlns:model="using:Pmail.Core.Models"
-    xmlns:views="using:Pmail.Views"
-    xmlns:toolkitConverters="using:Microsoft.Toolkit.Uwp.UI.Converters"
-    xmlns:converters="using:Pmail.Converters"
-    Style="{StaticResource PageStyle}"
     xmlns:behaviors="using:Pmail.Behaviors"
+    xmlns:converters="using:Pmail.Converters"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:i="using:Microsoft.Xaml.Interactivity"
+    xmlns:ic="using:Microsoft.Xaml.Interactions.Core"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:model="using:Pmail.Core.Models"
+    xmlns:toolkitConverters="using:Microsoft.Toolkit.Uwp.UI.Converters"
+    xmlns:views="using:Pmail.Views"
+    xmlns:winui="using:Microsoft.UI.Xaml.Controls"
     behaviors:NavigationViewHeaderBehavior.HeaderMode="Never"
     mc:Ignorable="d">
+    <!--  Style="{StaticResource PageStyle}"  -->
     <Page.Resources>
-        <toolkitConverters:BoolToVisibilityConverter x:Name="ReverseBoolToVisibility" TrueValue="Collapsed" FalseValue="Visible" />
+        <toolkitConverters:BoolToVisibilityConverter
+            x:Name="ReverseBoolToVisibility"
+            FalseValue="Visible"
+            TrueValue="Collapsed" />
         <converters:DateTimeFormatConverter x:Name="dateTimeFormatConverter" />
     </Page.Resources>
 
     <Grid x:Name="ContentArea">
-        <VisualStateManager.VisualStateGroups>
-            <VisualStateGroup>
-                <VisualState>
-                    <VisualState.StateTriggers>
-                        <!--641 is the default CompactModeThresholdWidth in NavigationView -->
-                        <AdaptiveTrigger MinWindowWidth="641" />
-                    </VisualState.StateTriggers>
-                    <VisualState.Setters>
-                        <Setter Target="titleTextBlock.Margin" Value="{StaticResource SmallLeftMargin}" />
-                    </VisualState.Setters>
-                </VisualState>
-            </VisualStateGroup>
-        </VisualStateManager.VisualStateGroups>
         <winui:TwoPaneView
             x:Name="twoPaneView"
+            HorizontalAlignment="Stretch"
+            VerticalAlignment="Stretch"
+            MinWideModeWidth="772"
             Pane1Length="320"
             Pane2Length="*"
             PanePriority="{x:Bind ViewModel.TwoPanePriority, Mode=OneWay}"
-            MinWideModeWidth="772"
-            WideModeConfiguration="LeftRight"
             TallModeConfiguration="SinglePane"
-            HorizontalAlignment="Stretch"
-            VerticalAlignment="Stretch">
+            WideModeConfiguration="LeftRight">
             <i:Interaction.Behaviors>
                 <ic:EventTriggerBehavior EventName="ModeChanged">
                     <ic:InvokeCommandAction Command="{x:Bind ViewModel.ModeChangedCommand}" />
                 </ic:EventTriggerBehavior>
             </i:Interaction.Behaviors>
             <winui:TwoPaneView.Pane1>
-                <Grid Background="{ThemeResource SystemControlPageBackgroundChromeLowBrush}">
+                <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="40" />
                         <RowDefinition Height="*" />
@@ -58,8 +48,8 @@
                     <TextBlock
                         x:Name="titleTextBlock"
                         x:Uid="TwoPaneViewTitle"
-                        VerticalAlignment="Center"
                         Margin="96,0,0,0"
+                        VerticalAlignment="Center"
                         Style="{StaticResource ListTitleStyle}" />
                     <ListView
                         Grid.Row="1"
@@ -80,10 +70,23 @@
                 </Grid>
             </winui:TwoPaneView.Pane1>
             <winui:TwoPaneView.Pane2>
-                <Grid Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+                <Grid>
                     <views:TwoPaneViewDetailControl SelectedItem="{x:Bind ViewModel.Selected, Mode=OneWay}" />
                 </Grid>
             </winui:TwoPaneView.Pane2>
         </winui:TwoPaneView>
+        <VisualStateManager.VisualStateGroups>
+            <VisualStateGroup>
+                <VisualState>
+                    <VisualState.StateTriggers>
+                        <!--  641 is the default CompactModeThresholdWidth in NavigationView  -->
+                        <AdaptiveTrigger MinWindowWidth="641" />
+                    </VisualState.StateTriggers>
+                    <VisualState.Setters>
+                        <Setter Target="titleTextBlock.Margin" Value="{StaticResource SmallLeftMargin}" />
+                    </VisualState.Setters>
+                </VisualState>
+            </VisualStateGroup>
+        </VisualStateManager.VisualStateGroups>
     </Grid>
 </Page>

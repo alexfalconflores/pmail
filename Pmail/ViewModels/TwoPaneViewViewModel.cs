@@ -2,10 +2,8 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Windows.Input;
-
-using Microsoft.Toolkit.Mvvm.ComponentModel;
-using Microsoft.Toolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Pmail.Core.Models;
 using Pmail.Core.Services;
@@ -13,101 +11,83 @@ using Pmail.Helpers;
 
 using WinUI = Microsoft.UI.Xaml.Controls;
 
-namespace Pmail.ViewModels
+namespace Pmail.ViewModels;
+
+public partial class TwoPaneViewViewModel : ObservableObject, IBackNavigationHandler
 {
-    public class TwoPaneViewViewModel : ObservableObject, IBackNavigationHandler
+    private WinUI.TwoPaneView _twoPaneView;
+    [ObservableProperty]
+    private SampleOrder selected;
+    [ObservableProperty]
+    private WinUI.TwoPaneViewPriority twoPanePriority;
+
+    public event EventHandler<bool> OnPageCanGoBackChanged;
+
+    public ObservableCollection<SampleOrder> SampleItems { get; private set; } = [];
+
+    public TwoPaneViewViewModel()
     {
-        private WinUI.TwoPaneView _twoPaneView;
-        private SampleOrder _selected;
-        private ICommand _itemClickCommand;
-        private ICommand _modeChangedCommand;
+    }
 
-        private WinUI.TwoPaneViewPriority _twoPanePriority;
+    public void Initialize(WinUI.TwoPaneView twoPaneView)
+    {
+        _twoPaneView = twoPaneView;
+    }
 
-        public event EventHandler<bool> OnPageCanGoBackChanged;
+    public async Task LoadDataAsync()
+    {
+        SampleItems.Clear();
 
-        public SampleOrder Selected
+        var data = await SampleDataService.GetTwoPaneViewDataAsync();
+
+        foreach (var item in data)
         {
-            get { return _selected; }
-            set { SetProperty(ref _selected, value); }
+            SampleItems.Add(item);
         }
 
-        public WinUI.TwoPaneViewPriority TwoPanePriority
+        Selected = SampleItems.First();
+    }
+
+    public bool TryCloseDetail()
+    {
+        if (TwoPanePriority == WinUI.TwoPaneViewPriority.Pane2)
         {
-            get { return _twoPanePriority; }
-            set { SetProperty(ref _twoPanePriority, value); }
+            TwoPanePriority = WinUI.TwoPaneViewPriority.Pane1;
+            return true;
         }
 
-        public ObservableCollection<SampleOrder> SampleItems { get; private set; } = new ObservableCollection<SampleOrder>();
-
-        public ICommand ItemClickCommand => _itemClickCommand ?? (_itemClickCommand = new RelayCommand(OnItemClick));
-
-        public ICommand ModeChangedCommand => _modeChangedCommand ?? (_modeChangedCommand = new RelayCommand<WinUI.TwoPaneView>(OnModeChanged));
-
-        public TwoPaneViewViewModel()
+        return false;
+    }
+    [RelayCommand]
+    private void OnItemClick()
+    {
+        if (_twoPaneView.Mode == WinUI.TwoPaneViewMode.SinglePane)
         {
+            OnPageCanGoBackChanged?.Invoke(this, true);
+            TwoPanePriority = WinUI.TwoPaneViewPriority.Pane2;
         }
-
-        public void Initialize(WinUI.TwoPaneView twoPaneView)
+    }
+    [RelayCommand]
+    private void OnModeChanged(WinUI.TwoPaneView twoPaneView)
+    {
+        if (twoPaneView.Mode == WinUI.TwoPaneViewMode.SinglePane)
         {
-            _twoPaneView = twoPaneView;
+            OnPageCanGoBackChanged?.Invoke(this, true);
+            TwoPanePriority = WinUI.TwoPaneViewPriority.Pane2;
         }
-
-        public async Task LoadDataAsync()
+        else
         {
-            SampleItems.Clear();
-
-            var data = await SampleDataService.GetTwoPaneViewDataAsync();
-
-            foreach (var item in data)
-            {
-                SampleItems.Add(item);
-            }
-
-            Selected = SampleItems.First();
+            OnPageCanGoBackChanged?.Invoke(this, false);
+            TwoPanePriority = WinUI.TwoPaneViewPriority.Pane1;
         }
+    }
 
-        public bool TryCloseDetail()
+    public void GoBack()
+    {
+        if (TwoPanePriority == WinUI.TwoPaneViewPriority.Pane2)
         {
-            if (TwoPanePriority == WinUI.TwoPaneViewPriority.Pane2)
-            {
-                TwoPanePriority = WinUI.TwoPaneViewPriority.Pane1;
-                return true;
-            }
-
-            return false;
-        }
-
-        private void OnItemClick()
-        {
-            if (_twoPaneView.Mode == WinUI.TwoPaneViewMode.SinglePane)
-            {
-                OnPageCanGoBackChanged?.Invoke(this, true);
-                TwoPanePriority = WinUI.TwoPaneViewPriority.Pane2;
-            }
-        }
-
-        private void OnModeChanged(WinUI.TwoPaneView twoPaneView)
-        {
-            if (twoPaneView.Mode == WinUI.TwoPaneViewMode.SinglePane)
-            {
-                OnPageCanGoBackChanged?.Invoke(this, true);
-                TwoPanePriority = WinUI.TwoPaneViewPriority.Pane2;
-            }
-            else
-            {
-                OnPageCanGoBackChanged?.Invoke(this, false);
-                TwoPanePriority = WinUI.TwoPaneViewPriority.Pane1;
-            }
-        }
-
-        public void GoBack()
-        {
-            if (TwoPanePriority == WinUI.TwoPaneViewPriority.Pane2)
-            {
-                TwoPanePriority = WinUI.TwoPaneViewPriority.Pane1;
-                OnPageCanGoBackChanged?.Invoke(this, false);
-            }
+            TwoPanePriority = WinUI.TwoPaneViewPriority.Pane1;
+            OnPageCanGoBackChanged?.Invoke(this, false);
         }
     }
 }

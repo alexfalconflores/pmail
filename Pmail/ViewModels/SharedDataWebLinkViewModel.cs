@@ -1,34 +1,28 @@
 ﻿using System;
 using System.Threading.Tasks;
-
+using CommunityToolkit.Mvvm.ComponentModel;
 using Pmail.Helpers;
 
 using Windows.ApplicationModel.DataTransfer;
 using Windows.ApplicationModel.DataTransfer.ShareTarget;
 
-namespace Pmail.ViewModels
+namespace Pmail.ViewModels;
+
+public partial class SharedDataWebLinkViewModel : SharedDataViewModelBase
 {
-    public class SharedDataWebLinkViewModel : SharedDataViewModelBase
+    [ObservableProperty]
+    private Uri uri;
+
+    public SharedDataWebLinkViewModel()
     {
-        private Uri _uri;
+    }
 
-        public Uri Uri
-        {
-            get => _uri;
-            set => SetProperty(ref _uri, value);
-        }
+    public override async Task LoadDataAsync(ShareOperation shareOperation)
+    {
+        await base.LoadDataAsync(shareOperation);
 
-        public SharedDataWebLinkViewModel()
-        {
-        }
-
-        public override async Task LoadDataAsync(ShareOperation shareOperation)
-        {
-            await base.LoadDataAsync(shareOperation);
-
-            PageTitle = "ShareTarget_WebLinkTitle".GetLocalized();
-            DataFormat = StandardDataFormats.WebLink;
-            Uri = await shareOperation.GetWebLinkAsync();
-        }
+        PageTitle = "ShareTarget_WebLinkTitle".GetLocalized();
+        DataFormat = StandardDataFormats.WebLink;
+        Uri = await shareOperation.GetWebLinkAsync();
     }
 }

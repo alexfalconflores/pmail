@@ -6,8 +6,8 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     xmlns:templateSelectors="using:Pmail.TemplateSelectors"
     xmlns:viewModels="using:Pmail.ViewModels"
-    Style="{StaticResource PageStyle}"
     mc:Ignorable="d">
+    <!--  Style="{StaticResource PageStyle}"  -->
     <Grid x:Name="ContentArea" Margin="{StaticResource MediumLeftRightMargin}">
 
         <Grid.RowDefinitions>
@@ -26,7 +26,7 @@
                 <templateSelectors:SharedContentTemplateSelector>
                     <templateSelectors:SharedContentTemplateSelector.WebLinkTemplate>
                         <DataTemplate x:DataType="viewModels:SharedDataWebLinkViewModel">
-                            <HyperlinkButton Content="{x:Bind Title}" NavigateUri="{x:Bind Uri}" />                           
+                            <HyperlinkButton Content="{x:Bind Title}" NavigateUri="{x:Bind Uri}" />
                         </DataTemplate>
                     </templateSelectors:SharedContentTemplateSelector.WebLinkTemplate>
                     <templateSelectors:SharedContentTemplateSelector.StorageItemsTemplate>

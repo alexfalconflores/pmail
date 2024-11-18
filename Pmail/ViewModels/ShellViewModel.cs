@@ -3,9 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
-
-using Microsoft.Toolkit.Mvvm.ComponentModel;
-using Microsoft.Toolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 
 using Pmail.Helpers;
 using Pmail.Services;
@@ -18,148 +17,132 @@ using Windows.UI.Xaml.Navigation;
 
 using WinUI = Microsoft.UI.Xaml.Controls;
 
-namespace Pmail.ViewModels
+namespace Pmail.ViewModels;
+
+public partial class ShellViewModel : ObservableObject
 {
-    public class ShellViewModel : ObservableObject
+    private readonly KeyboardAccelerator _altLeftKeyboardAccelerator = BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu);
+    private readonly KeyboardAccelerator _backKeyboardAccelerator = BuildKeyboardAccelerator(VirtualKey.GoBack);
+
+    [ObservableProperty]
+    private bool isBackEnabled;
+    private IList<KeyboardAccelerator> _keyboardAccelerators;
+    private WinUI.NavigationView _navigationView;
+    [ObservableProperty]
+    private WinUI.NavigationViewItem selected;
+
+    public ShellViewModel()
     {
-        private readonly KeyboardAccelerator _altLeftKeyboardAccelerator = BuildKeyboardAccelerator(VirtualKey.Left, VirtualKeyModifiers.Menu);
-        private readonly KeyboardAccelerator _backKeyboardAccelerator = BuildKeyboardAccelerator(VirtualKey.GoBack);
+    }
 
-        private bool _isBackEnabled;
-        private IList<KeyboardAccelerator> _keyboardAccelerators;
-        private WinUI.NavigationView _navigationView;
-        private WinUI.NavigationViewItem _selected;
-        private ICommand _loadedCommand;
-        private ICommand _itemInvokedCommand;
+    public void Initialize(Frame frame, WinUI.NavigationView navigationView, IList<KeyboardAccelerator> keyboardAccelerators)
+    {
+        _navigationView = navigationView;
+        _keyboardAccelerators = keyboardAccelerators;
+        NavigationService.Frame = frame;
+        NavigationService.NavigationFailed += Frame_NavigationFailed;
+        NavigationService.Navigated += Frame_Navigated;
+        NavigationService.OnCurrentPageCanGoBackChanged += OnCurrentPageCanGoBackChanged;
+        _navigationView.BackRequested += OnBackRequested;
+    }
+    [RelayCommand]
+    private async void OnLoaded()
+    {
+        // Keyboard accelerators are added here to avoid showing 'Alt + left' tooltip on the page.
+        // More info on tracking issue https://github.com/Microsoft/microsoft-ui-xaml/issues/8
+        _keyboardAccelerators.Add(_altLeftKeyboardAccelerator);
+        _keyboardAccelerators.Add(_backKeyboardAccelerator);
+        await Task.CompletedTask;
+    }
 
-        public bool IsBackEnabled
+    [RelayCommand]
+    private void OnItemInvoked(WinUI.NavigationViewItemInvokedEventArgs args)
+    {
+        if (args.IsSettingsInvoked)
         {
-            get { return _isBackEnabled; }
-            set { SetProperty(ref _isBackEnabled, value); }
+            NavigationService.Navigate(typeof(SettingsPage), null, args.RecommendedNavigationTransitionInfo);
         }
-
-        public WinUI.NavigationViewItem Selected
+        else
         {
-            get { return _selected; }
-            set { SetProperty(ref _selected, value); }
-        }
+            var selectedItem = args.InvokedItemContainer as WinUI.NavigationViewItem;
+            var pageType = selectedItem?.GetValue(NavHelper.NavigateToProperty) as Type;
 
-        public ICommand LoadedCommand => _loadedCommand ?? (_loadedCommand = new RelayCommand(OnLoaded));
-
-        public ICommand ItemInvokedCommand => _itemInvokedCommand ?? (_itemInvokedCommand = new RelayCommand<WinUI.NavigationViewItemInvokedEventArgs>(OnItemInvoked));
-
-        public ShellViewModel()
-        {
-        }
-
-        public void Initialize(Frame frame, WinUI.NavigationView navigationView, IList<KeyboardAccelerator> keyboardAccelerators)
-        {
-            _navigationView = navigationView;
-            _keyboardAccelerators = keyboardAccelerators;
-            NavigationService.Frame = frame;
-            NavigationService.NavigationFailed += Frame_NavigationFailed;
-            NavigationService.Navigated += Frame_Navigated;
-            NavigationService.OnCurrentPageCanGoBackChanged += OnCurrentPageCanGoBackChanged;
-            _navigationView.BackRequested += OnBackRequested;
-        }
-
-        private async void OnLoaded()
-        {
-            // Keyboard accelerators are added here to avoid showing 'Alt + left' tooltip on the page.
-            // More info on tracking issue https://github.com/Microsoft/microsoft-ui-xaml/issues/8
-            _keyboardAccelerators.Add(_altLeftKeyboardAccelerator);
-            _keyboardAccelerators.Add(_backKeyboardAccelerator);
-            await Task.CompletedTask;
-        }
-
-        private void OnItemInvoked(WinUI.NavigationViewItemInvokedEventArgs args)
-        {
-            if (args.IsSettingsInvoked)
+            if (pageType != null)
             {
-                NavigationService.Navigate(typeof(SettingsPage), null, args.RecommendedNavigationTransitionInfo);
-            }
-            else
-            {
-                var selectedItem = args.InvokedItemContainer as WinUI.NavigationViewItem;
-                var pageType = selectedItem?.GetValue(NavHelper.NavigateToProperty) as Type;
-
-                if (pageType != null)
-                {
-                    NavigationService.Navigate(pageType, null, args.RecommendedNavigationTransitionInfo);
-                }
+                NavigationService.Navigate(pageType, null, args.RecommendedNavigationTransitionInfo);
             }
         }
+    }
 
-        private void OnBackRequested(WinUI.NavigationView sender, WinUI.NavigationViewBackRequestedEventArgs args)
+    private void OnBackRequested(WinUI.NavigationView sender, WinUI.NavigationViewBackRequestedEventArgs args)
+    {
+        NavigationService.GoBack();
+    }
+
+    private void Frame_NavigationFailed(object sender, NavigationFailedEventArgs e)
+    {
+        throw e.Exception;
+    }
+
+    private void OnCurrentPageCanGoBackChanged(object sender, bool currentPageCanGoBack)
+        => IsBackEnabled = NavigationService.CanGoBack || currentPageCanGoBack;
+
+    private void Frame_Navigated(object sender, NavigationEventArgs e)
+    {
+        IsBackEnabled = NavigationService.CanGoBack;
+        if (e.SourcePageType == typeof(SettingsPage))
         {
-            NavigationService.GoBack();
+            Selected = _navigationView.SettingsItem as WinUI.NavigationViewItem;
+            return;
         }
 
-        private void Frame_NavigationFailed(object sender, NavigationFailedEventArgs e)
+        var selectedItem = GetSelectedItem(_navigationView.MenuItems, e.SourcePageType);
+        if (selectedItem != null)
         {
-            throw e.Exception;
+            Selected = selectedItem;
         }
+    }
 
-        private void OnCurrentPageCanGoBackChanged(object sender, bool currentPageCanGoBack)
-            => IsBackEnabled = NavigationService.CanGoBack || currentPageCanGoBack;
-
-        private void Frame_Navigated(object sender, NavigationEventArgs e)
+    private WinUI.NavigationViewItem GetSelectedItem(IEnumerable<object> menuItems, Type pageType)
+    {
+        foreach (var item in menuItems.OfType<WinUI.NavigationViewItem>())
         {
-            IsBackEnabled = NavigationService.CanGoBack;
-            if (e.SourcePageType == typeof(SettingsPage))
+            if (IsMenuItemForPageType(item, pageType))
             {
-                Selected = _navigationView.SettingsItem as WinUI.NavigationViewItem;
-                return;
+                return item;
             }
 
-            var selectedItem = GetSelectedItem(_navigationView.MenuItems, e.SourcePageType);
-            if (selectedItem != null)
+            var selectedChild = GetSelectedItem(item.MenuItems, pageType);
+            if (selectedChild != null)
             {
-                Selected = selectedItem;
+                return selectedChild;
             }
         }
 
-        private WinUI.NavigationViewItem GetSelectedItem(IEnumerable<object> menuItems, Type pageType)
+        return null;
+    }
+
+    private bool IsMenuItemForPageType(WinUI.NavigationViewItem menuItem, Type sourcePageType)
+    {
+        var pageType = menuItem.GetValue(NavHelper.NavigateToProperty) as Type;
+        return pageType == sourcePageType;
+    }
+
+    private static KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)
+    {
+        var keyboardAccelerator = new KeyboardAccelerator() { Key = key };
+        if (modifiers.HasValue)
         {
-            foreach (var item in menuItems.OfType<WinUI.NavigationViewItem>())
-            {
-                if (IsMenuItemForPageType(item, pageType))
-                {
-                    return item;
-                }
-
-                var selectedChild = GetSelectedItem(item.MenuItems, pageType);
-                if (selectedChild != null)
-                {
-                    return selectedChild;
-                }
-            }
-
-            return null;
+            keyboardAccelerator.Modifiers = modifiers.Value;
         }
 
-        private bool IsMenuItemForPageType(WinUI.NavigationViewItem menuItem, Type sourcePageType)
-        {
-            var pageType = menuItem.GetValue(NavHelper.NavigateToProperty) as Type;
-            return pageType == sourcePageType;
-        }
+        keyboardAccelerator.Invoked += OnKeyboardAcceleratorInvoked;
+        return keyboardAccelerator;
+    }
 
-        private static KeyboardAccelerator BuildKeyboardAccelerator(VirtualKey key, VirtualKeyModifiers? modifiers = null)
-        {
-            var keyboardAccelerator = new KeyboardAccelerator() { Key = key };
-            if (modifiers.HasValue)
-            {
-                keyboardAccelerator.Modifiers = modifiers.Value;
-            }
-
-            keyboardAccelerator.Invoked += OnKeyboardAcceleratorInvoked;
-            return keyboardAccelerator;
-        }
-
-        private static void OnKeyboardAcceleratorInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
-        {
-            var result = NavigationService.GoBack();
-            args.Handled = result;
-        }
+    private static void OnKeyboardAcceleratorInvoked(KeyboardAccelerator sender, KeyboardAcceleratorInvokedEventArgs args)
+    {
+        var result = NavigationService.GoBack();
+        args.Handled = result;
     }
 }
